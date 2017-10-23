@@ -36,6 +36,10 @@ class SpiderController extends Controller
                 $patents_list[] = array_shift($this->queue);
             }
             $this->crawlBasicInfo(array_filter($patents_list));
+
+            $randomSeconds = mt_rand(1,3);
+            sleep($randomSeconds);
+
         } while (!empty($this->queue));
 
         $this->queue = Patent::find()->select(['application_no'])->asArray()->all();
@@ -45,6 +49,10 @@ class SpiderController extends Controller
                 $patents_list[] = array_shift($this->queue);
             }
             $this->crawlPublicationInfo(array_filter($patents_list));
+
+            $randomSeconds = mt_rand(1,3);
+            sleep($randomSeconds);
+
         } while (!empty($this->queue));
 
         $this->queue = Patent::find()->select(['application_no'])->asArray()->all();
@@ -54,6 +62,10 @@ class SpiderController extends Controller
                 $patents_list[] = array_shift($this->queue);
             }
             $this->crawlPaymentInfo(array_filter($patents_list));
+
+            $randomSeconds = mt_rand(1,3);
+            sleep($randomSeconds);
+
         } while (!empty($this->queue));
 
         $this->stdout('Time Consuming:' . (time() - $start) . ' seconds' . PHP_EOL);
@@ -125,15 +137,12 @@ class SpiderController extends Controller
         $crawler->addHtmlContent($html);
         $last_span = $crawler->filter('body > span')->last();
         if (!$last_span->count()) {
-            $key = $this->single($application_no, 'fee');
-            if ($key == '') {
-                $this->stdout('Error: empty node'.$application_no.PHP_EOL.'Source code: '.$html);
-                return [
-                    'unpaid_fee' => [],
-                    'paid_fee' => [],
-                    'overdue_fine' => []
-                ];
-            }
+            $this->stdout('Error: empty node'.$application_no.PHP_EOL.'Source code: '.$html);
+            return [
+                'unpaid_fee' => [],
+                'paid_fee' => [],
+                'overdue_fine' => []
+            ];
         } else {
             $key = $last_span->attr('id');
         }
@@ -431,11 +440,10 @@ class SpiderController extends Controller
             'change_of_bibliographic_data' => null
         ];
         if (!$last_span->count()) {
-            $key = $this->single($application_no, 'basic');
-            if ($key == '') {
-                $this->stdout('Error: empty node '. $application_no .PHP_EOL.'Source code: '.$html);
-                return $result;
-            }
+
+            $this->stdout('Error: empty node '. $application_no .PHP_EOL.'Source code: '.$html);
+            return $result;
+
         } else {
             $key = $last_span->attr('id');
         }
@@ -709,11 +717,10 @@ class SpiderController extends Controller
             'issue_announcement' => null
         ];
         if (!$last_span->count()) {
-            $key = $this->single($application_no, 'publication');
-            if ($key == '') {
-                $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
-                return $publication;
-            }
+
+            $this->stdout('Error: empty node'. $application_no . PHP_EOL.'Source code: '.$html);
+            return $publication;
+
         } else {
             $key = $last_span->attr('id');
         }
@@ -976,16 +983,43 @@ class SpiderController extends Controller
 
         $html = $response->getBody();
 
-        $crawler = new Crawler();
-        $crawler->addHtmlContent($html);
-        $last_span = $crawler->filter('body > span')->last();
-        if ($last_span->count()){
-            $id_not_decrypted_yet = $last_span->attr('id');
-        } else{
-            $id_not_decrypted_yet = '';
+        return $html;
+    }
+
+    /**
+     * 单个爬取第一遍不能爬到的申请号
+     */
+    public function actionSingle()
+    {
+        $start = $_SERVER['REQUEST_TIME'];  // 开始时间
+        $this->stdout('Start time:' . date('H:i:s',$start) . PHP_EOL);
+
+        $application_no_s = Yii::$app->db
+            ->createCommand(
+            'SELECT application_no FROM patent WHERE title is null OR title=""'
+        )->queryColumn();
+
+        foreach ($application_no_s as $application_no)
+        {
+            $basic_html = $this->single($application_no, 'basic');
+            $result = $this->parseBasicInfo($basic_html, $application_no);
+            $this->saveBasicInfo($result, $application_no);
+
+
+            $fee_html = $this->single($application_no, 'fee');
+            $result = $this->parsePaymentInfo($fee_html, $application_no);
+            $this->savePaymentInfo($result, $application_no);
+
+            $publication_html = $this->single($application_no, 'publication');
+            $result = $this->parsePublicationInfo($publication_html, $application_no);
+            $this->savePublicationInfo($result, $application_no);
+
+            $randomSeconds = mt_rand(1,3);
+            sleep($randomSeconds);
         }
 
-        return $id_not_decrypted_yet;
+        $this->stdout('Voila'. PHP_EOL);
+        $this->stdout('Time Consuming:' . (time() - $start) . ' seconds' . PHP_EOL);
     }
 
     /**
