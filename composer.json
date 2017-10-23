@@ -20,7 +20,8 @@
         "yiisoft/yii2-swiftmailer": "~2.0.0",
         "yiisoft/yii2-redis": "^2.0",
         "phpoffice/phpexcel": "^1.8",
-        "guzzlehttp/guzzle": "~6.0"
+        "guzzlehttp/guzzle": "~6.0",
+        "doctrine/instantiator": "1.0.5"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.0.0",

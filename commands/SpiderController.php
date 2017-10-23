@@ -35,7 +35,25 @@ class SpiderController extends Controller
             for ($i = 0; $i < 5 ; $i++) {
                 $patents_list[] = array_shift($this->queue);
             }
-            $this->crawlBasicInfo($patents_list);
+            $this->crawlBasicInfo(array_filter($patents_list));
+        } while (!empty($this->queue));
+
+        $this->queue = Patent::find()->select(['application_no'])->asArray()->all();
+        do {
+            $patents_list = [];
+            for ($i = 0; $i < 5 ; $i++) {
+                $patents_list[] = array_shift($this->queue);
+            }
+            $this->crawlPublicationInfo(array_filter($patents_list));
+        } while (!empty($this->queue));
+
+        $this->queue = Patent::find()->select(['application_no'])->asArray()->all();
+        do {
+            $patents_list = [];
+            for ($i = 0; $i < 5 ; $i++) {
+                $patents_list[] = array_shift($this->queue);
+            }
+            $this->crawlPaymentInfo(array_filter($patents_list));
         } while (!empty($this->queue));
 
         $this->stdout('Time Consuming:' . (time() - $start) . ' seconds' . PHP_EOL);
@@ -77,10 +95,9 @@ class SpiderController extends Controller
                     if ($html === '') {
                         $this->stdout($patent_list[$index]['application_no'] . ' is null' .PHP_EOL);
                     } else {
-                        $result = $this->parseBasicInfo($html);
+                        $result = $this->parsePaymentInfo($html);
                         $this->savePaymentInfo($result, $patent_list[$index]['application_no']);
                         $this->stdout($patent_list[$index]['application_no'] . ' OK'.PHP_EOL);
-                        unset($this->queue[array_search($patent_list[$index]['application_no'],$this->queue)]);
                     }
                 }
             },
@@ -106,9 +123,13 @@ class SpiderController extends Controller
         $crawler = new Crawler();
         $crawler->addHtmlContent($html);
         $last_span = $crawler->filter('body > span')->last();
-        if (!$last_span) {
+        if (!$last_span->count()) {
             $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
-            return [];
+            return [
+                'unpaid_fee' => [],
+                'paid_fee' => [],
+                'overdue_fine' => []
+            ];
         } else {
             $key = $last_span->attr('id');
         }
@@ -344,7 +365,7 @@ class SpiderController extends Controller
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-//            'proxy' => $this->getIP(),
+            'proxy' => $this->getIP(),
             'cookies' => true,
             'timeout' => 60,
             'allow_redirects' => false,
@@ -363,13 +384,12 @@ class SpiderController extends Controller
             'fulfilled' => function (Response $response, $index) use ($patent_list) {
                 if ($response->getStatusCode() == 200) {
                     $html = $response->getBody()->getContents();
-                    if ($html === '') {
+                    if ($html == '') {
                         $this->stdout($patent_list[$index]['application_no'] . ' is null' .PHP_EOL);
                     } else {
                         $result = $this->parseBasicInfo($html);
                         $this->saveBasicInfo($result, $patent_list[$index]['application_no']);
                         $this->stdout($patent_list[$index]['application_no'] . ' OK'.PHP_EOL);
-                        unset($this->queue[array_search($patent_list[$index]['application_no'],$this->queue)]);
                     }
                 }
             },
@@ -395,13 +415,22 @@ class SpiderController extends Controller
         $crawler = new Crawler();
         $crawler->addHtmlContent($html);
         $last_span = $crawler->filter('body > span')->last();
-        if (!$last_span) {
+        $result = [
+            'filing_date' => null,
+            'title' => null,
+            'case_status' => null,
+            'inventors' => null,
+            'applicants' => null,
+            'ip_agency' => null,
+            'first_named_attorney' => null,
+            'change_of_bibliographic_data' => null
+        ];
+        if (!$last_span->count()) {
             $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
-            return [];
+            return $result;
         } else {
             $key = $last_span->attr('id');
         }
-        $result = [];
         $useful_id = array_flip($this->decrypt($key));
 
         // 获取申请日
@@ -581,14 +610,16 @@ class SpiderController extends Controller
         $model->first_named_attorney = $data['first_named_attorney'];
         $model->save();
 
-        foreach ($data['change_of_bibliographic_data'] as $value) {
-            $change = new ChangeOfBibliographicData();
-            $change->patent_id = $model->id;
-            $change->date = $value['date'];
-            $change->changed_item = $value['changed_item'];
-            $change->before_change = $value['before_change'];
-            $change->after_change = $value['after_change'];
-            $change->save();
+        if ($data['change_of_bibliographic_data']) {
+            foreach ($data['change_of_bibliographic_data'] as $value) {
+                $change = new ChangeOfBibliographicData();
+                $change->patent_id = $model->id;
+                $change->date = $value['date'];
+                $change->changed_item = $value['changed_item'];
+                $change->before_change = $value['before_change'];
+                $change->after_change = $value['after_change'];
+                $change->save();
+            }
         }
     }
 
@@ -627,10 +658,9 @@ class SpiderController extends Controller
                     if ($html === '') {
                         $this->stdout($patent_list[$index]['application_no'] . ' is null' .PHP_EOL);
                     } else {
-                        $result = $this->parseBasicInfo($html);
+                        $result = $this->parsePublicationInfo($html);
                         $this->savePublicationInfo($result, $patent_list[$index]['application_no']);
                         $this->stdout($patent_list[$index]['application_no'] . ' OK'.PHP_EOL);
-                        unset($this->queue[array_search($patent_list[$index]['application_no'],$this->queue)]);
                     }
                 }
             },
@@ -656,14 +686,6 @@ class SpiderController extends Controller
         $crawler = new Crawler();
         $crawler->addHtmlContent($html);
         $last_span = $crawler->filter('body > span')->last();
-        if (!$last_span) {
-            $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
-            return [];
-        } else {
-            $key = $last_span->attr('id');
-        }
-        $useful_id = array_flip($this->decrypt($key));
-
         // 发明公布/授权公告
         $publication = [
             'patent_type' => null,
@@ -671,6 +693,14 @@ class SpiderController extends Controller
             'publication_no' => null,
             'issue_announcement' => null
         ];
+        if (!$last_span->count()) {
+            $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
+            return $publication;
+        } else {
+            $key = $last_span->attr('id');
+        }
+        $useful_id = array_flip($this->decrypt($key));
+
         $crawler_info = new Crawler();
         $crawler_info->addHtmlContent($html);
         $tr_html = $crawler_info->filter("#gkggid")->filter("tr")->each(
@@ -922,7 +952,7 @@ class SpiderController extends Controller
 //        print_r($result);
 
         // 公开号测试 publication_info_html为发明专利,publication_info_html_b为实用新型
-//        $result = $this->parsePublicationInfo($this->publication_info_html_b);
+//        $result = $this->parsePublicationInfo($this->publication_info_html);
 //        print_r($result);
 
         // 费用信息测试
@@ -932,7 +962,7 @@ class SpiderController extends Controller
 //        print_r(implode(',',$applicants));
 //        $result[''] = implode('', $_info);
 
-        echo $this->getIP();
+//        echo $this->getIP();
     }
 
     public $basic_info_html = <<<HTML
