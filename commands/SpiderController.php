@@ -601,6 +601,12 @@ class SpiderController extends Controller
     public function saveBasicInfo($data, $application_no)
     {
         $model = Patent::findOne(['application_no' => $application_no]);
+        if (strlen($application_no) == 13) {
+            $patent_type = substr($application_no,4,1);
+        } else {
+            $patent_type = substr($application_no,2,1);
+        }
+        $model->patent_type = $patent_type == 1 ? '发明专利' : ($patent_type == 2 ? '实用新型' : ($patent_type == 3 ? '外观设计' : null));
         $model->title = $data['title'];
         $model->filing_date = $data['filing_date'];
         $model->case_status = $data['case_status'];
@@ -688,7 +694,6 @@ class SpiderController extends Controller
         $last_span = $crawler->filter('body > span')->last();
         // 发明公布/授权公告
         $publication = [
-            'patent_type' => null,
             'publication_date' => null,
             'publication_no' => null,
             'issue_announcement' => null
@@ -721,9 +726,6 @@ class SpiderController extends Controller
                 );
                 $type = implode('', $type);
                 if (mb_substr($type, 2) == '授权公告') {
-                    // 专利类型
-                    $patent_type = mb_substr($type, 0, 2);
-                    $publication['patent_type'] = ($patent_type == '发明' ? '发明专利' : ($patent_type == '新型' ? '实用新型' : ($patent_type == '外观' ? '外观设计' : null)));
                     // 授权公告日
                     $issue_announcement = $trCrawler->filter('span[name="record_gkgg:gonggaor"] span')->each(
                         function (Crawler $node) use ($useful_id) {
@@ -787,7 +789,6 @@ class SpiderController extends Controller
     public function savePublicationInfo($data, $application_no)
     {
         $model = Patent::findOne(['application_no' => $application_no]);
-        $model->patent_type = $data['patent_type'];
         $model->publication_no = $data['publication_no'];
         $model->publication_date = $data['publication_date'];
         $model->issue_announcement = $data['issue_announcement'];
