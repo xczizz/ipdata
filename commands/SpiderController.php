@@ -95,7 +95,7 @@ class SpiderController extends Controller
                     if ($html === '') {
                         $this->stdout($patent_list[$index]['application_no'] . ' is null' .PHP_EOL);
                     } else {
-                        $result = $this->parsePaymentInfo($html);
+                        $result = $this->parsePaymentInfo($html, $patent_list[$index]['application_no']);
                         $this->savePaymentInfo($result, $patent_list[$index]['application_no']);
                         $this->stdout($patent_list[$index]['application_no'] . ' OK'.PHP_EOL);
                     }
@@ -118,22 +118,29 @@ class SpiderController extends Controller
      * @param $html
      * @return array
      */
-    public function parsePaymentInfo($html)
+    public function parsePaymentInfo($html, $application_no)
     {
         $crawler = new Crawler();
         $crawler->addHtmlContent($html);
         $last_span = $crawler->filter('body > span')->last();
         if (!$last_span->count()) {
-            $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
+//            $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
+            $key = $this->single($application_no, 'fee');
+
+        } else {
+            $key = $last_span->attr('id');
+        }
+        if ($key !== ''){
+            $useful_id = array_flip($this->decrypt($key));
+        }
+        else{
             return [
                 'unpaid_fee' => [],
                 'paid_fee' => [],
                 'overdue_fine' => []
             ];
-        } else {
-            $key = $last_span->attr('id');
         }
-        $useful_id = array_flip($this->decrypt($key));
+
 
         // 应缴费信息
         $trHtml = $crawler->filter('#djfid')->filter('tr')->each(function (Crawler $node) {
@@ -387,7 +394,7 @@ class SpiderController extends Controller
                     if ($html == '') {
                         $this->stdout($patent_list[$index]['application_no'] . ' is null' .PHP_EOL);
                     } else {
-                        $result = $this->parseBasicInfo($html);
+                        $result = $this->parseBasicInfo($html, $patent_list[$index]['application_no']);
                         $this->saveBasicInfo($result, $patent_list[$index]['application_no']);
                         $this->stdout($patent_list[$index]['application_no'] . ' OK'.PHP_EOL);
                     }
@@ -410,7 +417,7 @@ class SpiderController extends Controller
      * @param $html
      * @return array
      */
-    public function parseBasicInfo($html)
+    public function parseBasicInfo($html, $application_no)
     {
         $crawler = new Crawler();
         $crawler->addHtmlContent($html);
@@ -426,12 +433,20 @@ class SpiderController extends Controller
             'change_of_bibliographic_data' => null
         ];
         if (!$last_span->count()) {
-            $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
-            return $result;
+//            $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
+            $key = $this->single($application_no, 'basic');
+
         } else {
             $key = $last_span->attr('id');
         }
-        $useful_id = array_flip($this->decrypt($key));
+        if ($key !== '')
+        {
+            $useful_id = array_flip($this->decrypt($key));
+        }
+        else{
+            return $result;
+        }
+
 
         // 获取申请日
         $crawler_info = new Crawler();
@@ -664,7 +679,7 @@ class SpiderController extends Controller
                     if ($html === '') {
                         $this->stdout($patent_list[$index]['application_no'] . ' is null' .PHP_EOL);
                     } else {
-                        $result = $this->parsePublicationInfo($html);
+                        $result = $this->parsePublicationInfo($html, $patent_list[$index]['application_no']);
                         $this->savePublicationInfo($result, $patent_list[$index]['application_no']);
                         $this->stdout($patent_list[$index]['application_no'] . ' OK'.PHP_EOL);
                     }
@@ -686,8 +701,12 @@ class SpiderController extends Controller
      *
      * @param $html
      * @return array
+     *
+     *
+     * @param $application_no
+     * @return string
      */
-    public function parsePublicationInfo($html)
+    public function parsePublicationInfo($html, $application_no)
     {
         $crawler = new Crawler();
         $crawler->addHtmlContent($html);
@@ -699,12 +718,22 @@ class SpiderController extends Controller
             'issue_announcement' => null
         ];
         if (!$last_span->count()) {
-            $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
-            return $publication;
+//            $this->stdout('Error: empty node'.PHP_EOL.'Source code: '.$html);
+            $key = $this->single($application_no, 'publication');
+
+
         } else {
             $key = $last_span->attr('id');
         }
-        $useful_id = array_flip($this->decrypt($key));
+        if ($key !== '')
+        {
+            $useful_id = array_flip($this->decrypt($key));
+        }
+        else
+        {
+            return $publication;
+        }
+
 
         $crawler_info = new Crawler();
         $crawler_info->addHtmlContent($html);
@@ -943,6 +972,43 @@ class SpiderController extends Controller
         } else {
             return [];
         }
+    }
+
+
+    public function single(String $application_no = '2003101076086', String $info_type): String
+    {
+        //$info_type
+        $base_uri = [
+            'basic' => 'http://cpquery.sipo.gov.cn/txnQueryBibliographicData.do?select-key:shenqingh=', //基本信息
+            'fee' =>  'http://cpquery.sipo.gov.cn/txnQueryFeeData.do?select-key:shenqingh=', //fee
+            'publication' => 'http://cpquery.sipo.gov.cn/txnQueryPublicationData.do?select-key:shenqingh=', //公告信息
+        ];
+        $client = new Client([
+            'headers' => [
+                'User-Agent' => $this->getUA(),
+            ],
+            'proxy' => $this->getIP(),
+            'cookies' => true,
+            'timeout' => 60,
+            'allow_redirects' => false,
+            'connect_timeout' => 60,
+        ]);
+
+        $respone = $client->request('GET', $base_uri[$info_type] . $application_no);
+
+        $html = $respone->getBody();
+
+        $crawler = new Crawler();
+        $crawler->addHtmlContent($html);
+        $last_span = $crawler->filter('body > span')->last();
+        if (!$last_span->count()){
+            $id_not_decrypted_yet = $last_span->attr('id');
+        }
+        else{
+            $id_not_decrypted_yet = '';
+        }
+
+        return $id_not_decrypted_yet;
     }
 
     /**
