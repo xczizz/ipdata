@@ -726,6 +726,8 @@ class SpiderController extends Controller
                 );
                 $type = implode('', $type);
                 if (mb_substr($type, 2) == '授权公告') {
+                    // 专利类型（不用来存入数据库）
+                    $patent_type = mb_substr($type, 0, 2);
                     // 授权公告日
                     $issue_announcement = $trCrawler->filter('span[name="record_gkgg:gonggaor"] span')->each(
                         function (Crawler $node) use ($useful_id) {
