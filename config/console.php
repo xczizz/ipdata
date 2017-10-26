@@ -2,6 +2,7 @@
 
 $params = require(__DIR__ . '/params.php');
 $db = require(__DIR__ . '/db.php');
+$dbIpapp = require (__DIR__ . '/dbIpapp.php');
 
 $config = [
     'id' => 'basic-console',
@@ -21,6 +22,7 @@ $config = [
             ],
         ],
         'db' => $db,
+        'dbIpapp' => $dbIpapp,
         'redis' => [
             'class' => 'yii\redis\Connection',
             'hostname' => '127.0.0.1',
