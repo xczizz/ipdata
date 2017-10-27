@@ -24,14 +24,13 @@ class SyncAppNoController extends Controller
     {
         echo 'Start time: ' . date('y/m/d H:i:s') . PHP_EOL;
         $successCount = 0;
-        $data = Patents::find()
+        $application_nos = Patents::find()
             ->select(['patentApplicationNo'])
             ->where(['not in', 'patentApplicationNo', ['', 'Not Available Yet']])
             ->asArray()
-            ->all();
+            ->column();
 
-        foreach ($data as $key => $val) {
-            $application_no = $val['patentApplicationNo'];
+        foreach ($application_nos as $application_no) {
             // 判断申请号是否存在
             if (!Patent::find()->where(['application_no'=>$application_no])->exists()) {
                 $model = new Patent;
