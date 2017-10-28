@@ -7,10 +7,17 @@ $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
+    'defaultRoute' => 'default/doc',
     'components' => [
         'request' => [
             // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
             'cookieValidationKey' => 'GoL3AVl-fp_htIWg_-AfIFAFKsoWbhA1',
+            'parsers' => [
+                'application/json' => 'yii\web\JsonParser',
+            ],
+        ],
+        'response' => [
+            'format' => yii\web\Response::FORMAT_JSON,
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
@@ -18,9 +25,11 @@ $config = [
         'user' => [
             'identityClass' => 'app\models\User',
             'enableAutoLogin' => true,
+            'enableSession' => false,
+            'loginUrl' => null
         ],
         'errorHandler' => [
-            'errorAction' => 'site/error',
+            'errorAction' => 'default/error',
         ],
         'mailer' => [
             'class' => 'yii\swiftmailer\Mailer',
@@ -39,14 +48,19 @@ $config = [
             ],
         ],
         'db' => $db,
-        /*
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
+                'GET /doc' => 'default/doc',
+                'GET patents/view/<application_no:\w+>' => 'patent/view',
+                'GET patents/<application_no:\w+>/change-of-bibliographic-data' => 'patent/change-of-bibliographic-data',
+                'GET patents/<application_no:\w+>/unpaid-fees' => 'patent/unpaid-fees',
+                'GET patents/<application_no:\w+>/paid-fees' => 'patent/paid-fees',
+                'GET patents/<application_no:\w+>/overdue-fees' => 'patent/overdue-fees',
+                'POST patents' => 'patent/create'
             ],
         ],
-        */
     ],
     'params' => $params,
 ];
