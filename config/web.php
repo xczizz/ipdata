@@ -48,7 +48,7 @@ $config = [
                 ],
             ],
         ],
-        'dbIpapp' => $
+        'dbIpapp' => $dbIpapp,
         'db' => $db,
         'urlManager' => [
             'enablePrettyUrl' => true,
