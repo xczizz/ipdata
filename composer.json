@@ -21,6 +21,7 @@
         "yiisoft/yii2-redis": "^2.0",
         "phpoffice/phpexcel": "^1.8",
         "guzzlehttp/guzzle": "~6.0",
+        "doctrine/annotations": "1.4.0",
         "doctrine/instantiator": "1.0.5"
     },
     "require-dev": {

@@ -4,7 +4,7 @@ namespace app\swagger;
 /**
  * @SWG\Swagger(
  *     schemes={"http"},
- *     host="api.ipapp.com",
+ *     host="api.shineip.com",
  *     basePath="/",
  *     produces={"application/json", "application/xml"},
  *     @SWG\Info(
