@@ -24,6 +24,9 @@ use Yii;
  */
 class Patent extends \yii\db\ActiveRecord
 {
+    // 申请号redis key
+    const APP_NOS_REDIS_KEY = 'patent:application_nos';
+
     /**
      * @inheritdoc
      */
@@ -71,4 +74,26 @@ class Patent extends \yii\db\ActiveRecord
             'updated_at' => 'Updated At',
         ];
     }
+
+    /**
+     * 保存数据后的操作
+     */
+    public function afterSave($insert, $changedAttributes)
+    {
+        if ($insert) {
+            // 同步申请号到redis中
+            $res = Yii::$app->redis->sadd(Patent::APP_NOS_REDIS_KEY, $this->application_no);
+        }
+        return parent::afterSave($insert, $changedAttributes);
+    }
+
+    /**
+     * 判断申请号是否存在
+     */
+    public static function appNoExist($application_no)
+    {
+        return Yii::$app->redis->sismember(self::APP_NOS_REDIS_KEY, $application_no);
+    }
+
+
 }

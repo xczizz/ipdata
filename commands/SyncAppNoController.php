@@ -18,6 +18,22 @@ class SyncAppNoController extends Controller
     public $queue = [];
 
     /**
+     * 把所有的申请号同步到redis集合中
+     */
+    public function actionSyncRedis()
+    {
+        $application_nos = Patent::find()
+            ->select(['application_no'])
+            ->asArray()
+            ->column();
+
+        foreach ($application_nos as $application_no) {
+            // 同步申请号到redis中
+            Yii::$app->redis->sadd(Patent::APP_NOS_REDIS_KEY, $application_no);
+        }
+    }
+
+    /**
      * 申请号同步脚本
      */
     public function actionIndex()
@@ -34,19 +50,13 @@ class SyncAppNoController extends Controller
             ->column();
 
         foreach ($application_nos as $application_no) {
-            // 通过redis判断是否同步过
-            if (Yii::$app->redis->sismember($redis_key, $application_no)) {
-                continue;
-            }
             // 判断申请号是否存在
-            if (!Patent::find()->where(['application_no'=>$application_no])->exists()) {
+            if (!Patent::appNoExist($application_no)) {
                 $model = new Patent;
                 $model->application_no = $application_no;
                 $model->save();
                 $successCount++;
             }
-            // 在redis中添加同步记录
-            Yii::$app->redis->sadd($redis_key, $application_no);
         }
         echo 'Successfully written: '.$successCount . PHP_EOL;
         $end_time = microtime(true);
