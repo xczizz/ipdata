@@ -13,9 +13,11 @@ use Yii;
  * @property string $title
  * @property string $filing_date
  * @property string $case_status
+ * @property string $general_status
  * @property string $publication_date
  * @property string $publication_no
  * @property string $issue_announcement
+ * @property string $issue_no
  * @property string $applicants
  * @property string $inventors
  * @property string $ip_agency
@@ -41,13 +43,13 @@ class Patent extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['application_no'], 'required'],
             [['publication_date', 'issue_announcement'], 'safe'],
             [['updated_at'], 'integer'],
-            [['application_no', 'publication_no', 'ip_agency', 'first_named_attorney'], 'string', 'max' => 255],
-            [['patent_type'], 'string', 'max' => 20],
+            [['application_no', 'general_status'], 'string', 'max' => 20],
+            [['patent_type'], 'string', 'max' => 10],
             [['title', 'applicants', 'inventors'], 'string', 'max' => 500],
-            [['filing_date', 'case_status'], 'string', 'max' => 50],
+            [['filing_date', 'case_status', 'publication_no', 'issue_no'], 'string', 'max' => 50],
+            [['ip_agency', 'first_named_attorney'], 'string', 'max' => 255],
             [['application_no'], 'unique'],
         ];
     }
@@ -64,9 +66,11 @@ class Patent extends \yii\db\ActiveRecord
             'title' => 'Title',
             'filing_date' => 'Filing Date',
             'case_status' => 'Case Status',
+            'general_status' => 'General Status',
             'publication_date' => 'Publication Date',
             'publication_no' => 'Publication No',
             'issue_announcement' => 'Issue Announcement',
+            'issue_no' => 'Issue No',
             'applicants' => 'Applicants',
             'inventors' => 'Inventors',
             'ip_agency' => 'Ip Agency',
@@ -77,18 +81,23 @@ class Patent extends \yii\db\ActiveRecord
 
     /**
      * 保存数据后的操作
+     *
+     * @param bool $insert
+     * @param array $changedAttributes
      */
     public function afterSave($insert, $changedAttributes)
     {
         if ($insert) {
             // 同步申请号到redis中
-            $res = Yii::$app->redis->sadd(Patent::APP_NOS_REDIS_KEY, $this->application_no);
+            Yii::$app->redis->sadd(Patent::APP_NOS_REDIS_KEY, $this->application_no);
         }
         return parent::afterSave($insert, $changedAttributes);
     }
 
     /**
      * 判断申请号是否存在
+     *
+     * @param string $application_no
      */
     public static function appNoExist($application_no)
     {

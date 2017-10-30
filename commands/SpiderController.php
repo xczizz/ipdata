@@ -731,7 +731,8 @@ class SpiderController extends Controller
         $publication = [
             'publication_date' => null,
             'publication_no' => null,
-            'issue_announcement' => null
+            'issue_announcement' => null,
+            'issue_no' => null
         ];
         if (!$last_span->count()) {
 
@@ -774,7 +775,7 @@ class SpiderController extends Controller
                         }
                     );
                     $publication['issue_announcement'] = implode('', $issue_announcement);
-                    // 授权公告号,授权公告号没有存入数据库
+                    // 授权公告号
                     $publication_no = $trCrawler->filter('span[name="record_gkgg:gonggaoh"] span')->each(
                         function (Crawler $node) use ($useful_id) {
                             if (isset($useful_id[$node->attr('id')])) {
@@ -783,6 +784,7 @@ class SpiderController extends Controller
                         }
                     );
                     $publication_no = str_replace(' ','',implode('', $publication_no));
+                    $publication['issue_no'] = $publication_no;
 
                     // 如果是新型和外观的话，公开号和授权号是一样的,公开日和授权日也是一样的
                     if ($patent_type != '发明') {
@@ -831,6 +833,7 @@ class SpiderController extends Controller
         $model->publication_no = $data['publication_no'];
         $model->publication_date = $data['publication_date'];
         $model->issue_announcement = $data['issue_announcement'];
+        $model->issue_no = $data['issue_no'];
         $model->updated_at = time();
         $model->publication_updated_at = time();
         $model->save();
