@@ -23,6 +23,9 @@ use Yii;
  * @property string $ip_agency
  * @property string $first_named_attorney
  * @property integer $updated_at
+ * @property integer $basic_updated_at
+ * @property integer $publication_updated_at
+ * @property integer $payment_updated_at
  */
 class Patent extends \yii\db\ActiveRecord
 {
@@ -44,7 +47,7 @@ class Patent extends \yii\db\ActiveRecord
     {
         return [
             [['publication_date', 'issue_announcement'], 'safe'],
-            [['updated_at'], 'integer'],
+            [['updated_at', 'basic_updated_at', 'publication_updated_at', 'payment_updated_at'], 'integer'],
             [['application_no', 'general_status'], 'string', 'max' => 20],
             [['patent_type'], 'string', 'max' => 10],
             [['title', 'applicants', 'inventors'], 'string', 'max' => 500],
@@ -76,6 +79,9 @@ class Patent extends \yii\db\ActiveRecord
             'ip_agency' => 'Ip Agency',
             'first_named_attorney' => 'First Named Attorney',
             'updated_at' => 'Updated At',
+            'basic_updated_at' => 'Basic Updated At',
+            'publication_updated_at' => 'Publication Updated At',
+            'payment_updated_at' => 'Payment Updated At',
         ];
     }
 

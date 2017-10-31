@@ -8,11 +8,11 @@
 
 namespace app\controllers;
 
-use app\models\OverdueFineOld;
-use app\models\PaidFeeOld;
-use app\models\UnpaidFeeOld;
+use app\models\OverdueFineApi;
+use app\models\PaidFeeApi;
+use app\models\UnpaidFeeApi;
 use Yii;
-use app\models\ChangeOfBibliographicDataOld;
+use app\models\ChangeOfBibliographicDataApi;
 use app\models\Patent;
 use yii\web\BadRequestHttpException;
 use yii\web\ConflictHttpException;
@@ -128,7 +128,7 @@ class PatentController extends BaseController
      */
     public function actionChangeOfBibliographicData()
     {
-        $data = ChangeOfBibliographicDataOld::find()
+        $data = ChangeOfBibliographicDataApi::find()
             ->where(['patent_id' => $this->_patent->id])
             ->orderBy('date ASC')
             ->all();
@@ -164,7 +164,7 @@ class PatentController extends BaseController
      */
     public function actionUnpaidFees()
     {
-        return UnpaidFeeOld::find()
+        return UnpaidFeeApi::find()
             ->where(['patent_id' => $this->_patent->id])
             ->orderBy('due_date ASC')
             ->all();
@@ -199,7 +199,7 @@ class PatentController extends BaseController
      */
     public function actionPaidFees()
     {
-        return PaidFeeOld::find()
+        return PaidFeeApi::find()
             ->where(['patent_id' => $this->_patent->id])
             ->all();
     }
@@ -233,7 +233,7 @@ class PatentController extends BaseController
      */
     public function actionOverdueFees()
     {
-        return OverdueFineOld::find()
+        return OverdueFineApi::find()
             ->where(['patent_id' => $this->_patent->id])
             ->all();
     }
