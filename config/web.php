@@ -2,7 +2,7 @@
 
 $params = require(__DIR__ . '/params.php');
 $db = require(__DIR__ . '/db.php');
-$dbIpapp = require(__DIR__ . '/ipapp_db.php');
+$ipapp_db = require(__DIR__ . '/ipapp_db.php');
 
 $config = [
     'id' => 'basic',
@@ -48,7 +48,7 @@ $config = [
                 ],
             ],
         ],
-        'dbIpapp' => $dbIpapp,
+        'ipapp_db' => $ipapp_db,
         'db' => $db,
         'urlManager' => [
             'enablePrettyUrl' => true,

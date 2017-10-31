@@ -41,7 +41,7 @@ class Patents extends ActiveRecord
 
     public static function getDb()
     {
-        return \Yii::$app->dbIpapp;
+        return \Yii::$app->ipapp_db;
     }
 
     /**

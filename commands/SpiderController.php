@@ -26,47 +26,55 @@ class SpiderController extends Controller
 
     public function actionIndex()
     {
+        // 今日时间戳
+        $today_time = strtotime(date('Y-m-d'));
         $start = $_SERVER['REQUEST_TIME'];  // 开始时间
         $this->stdout('Start time:' . date('H:i:s',$start) . PHP_EOL);
-        $this->queue = Patent::find()->select(['application_no'])->asArray()->all();
+        $this->queue = Patent::find()->select(['application_no'])->where(['<', 'basic_updated_at', $today_time])->asArray()->all();
+        $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
 
-        do {
+        while (!empty($this->queue)) {
             $patents_list = [];
-            for ($i = 0; $i < 5 ; $i++) {
+            for ($i = 0; $i < 10 ; $i++) {
                 $patents_list[] = array_shift($this->queue);
             }
             $this->crawlBasicInfo(array_filter($patents_list));
 
             $randomSeconds = mt_rand(1,3);
-            sleep($randomSeconds);
+            // sleep($randomSeconds);
 
-        } while (!empty($this->queue));
+        }
+        $this->stdout('crawlBasicInfo done' . PHP_EOL);
 
-        $this->queue = Patent::find()->select(['application_no'])->asArray()->all();
-        do {
+        $this->queue = Patent::find()->select(['application_no'])->where(['<', 'publication_updated_at', $today_time])->asArray()->all();
+        $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
+        while (!empty($this->queue)) {
             $patents_list = [];
-            for ($i = 0; $i < 5 ; $i++) {
+            for ($i = 0; $i < 10 ; $i++) {
                 $patents_list[] = array_shift($this->queue);
             }
             $this->crawlPublicationInfo(array_filter($patents_list));
 
             $randomSeconds = mt_rand(1,3);
-            sleep($randomSeconds);
+            // sleep($randomSeconds);
 
-        } while (!empty($this->queue));
+        }
+        $this->stdout('crawlPublicationInfo done' . PHP_EOL);
 
-        $this->queue = Patent::find()->select(['application_no'])->asArray()->all();
-        do {
+        $this->queue = Patent::find()->select(['application_no'])->where(['<', 'payment_updated_at', $today_time])->asArray()->all();
+        $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
+        while (!empty($this->queue)) {
             $patents_list = [];
-            for ($i = 0; $i < 5 ; $i++) {
+            for ($i = 0; $i < 10 ; $i++) {
                 $patents_list[] = array_shift($this->queue);
             }
             $this->crawlPaymentInfo(array_filter($patents_list));
 
             $randomSeconds = mt_rand(1,3);
-            sleep($randomSeconds);
+            // sleep($randomSeconds);
 
-        } while (!empty($this->queue));
+        }
+        $this->stdout('crawlPaymentInfo done' . PHP_EOL);
 
         $this->stdout('Time Consuming:' . (time() - $start) . ' seconds' . PHP_EOL);
 
@@ -85,11 +93,11 @@ class SpiderController extends Controller
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-            'proxy' => $this->getIP(),
+            // 'proxy' => $this->getIP(),
             'cookies' => true,
-            'timeout' => 60,
+            'timeout' => 10,
             'allow_redirects' => false,
-            'connect_timeout' => 60,
+            'connect_timeout' => 10,
         ]);
         $requests = function ($total) use ($base_uri, $application_no, $client) {
             foreach ($application_no as $patent) {
@@ -116,7 +124,7 @@ class SpiderController extends Controller
             'rejected' => function ($reason, $index) use ($patent_list) {
 
                 $this->stdout('Error occurred time:' . date('H:i:s',time()) . PHP_EOL);
-                $this->stdout('Error No:' . $patent_list[$index]['application_no'] . ' Reason:' . $reason . PHP_EOL);
+                $this->stdout('Error No:' . $patent_list[$index]['application_no'] . ' Reason:' . $reason->getMessage() . PHP_EOL);
                 // this is delivered each failed request
             },
         ]);
@@ -336,6 +344,10 @@ class SpiderController extends Controller
     public function savePaymentInfo($data, $application_no)
     {
         $patent_id = Patent::findOne(['application_no' => $application_no])->id;
+        // 删除旧的数据
+        UnpaidFee::deleteAll(['patent_id'=>$patent_id]);
+        PaidFee::deleteAll(['patent_id'=>$patent_id]);
+        OverdueFine::deleteAll(['patent_id'=>$patent_id]);
         foreach ($data['unpaid_fee'] as $value) {
             $unpaid_model = new UnpaidFee();
             $unpaid_model->patent_id = $patent_id;
@@ -363,6 +375,10 @@ class SpiderController extends Controller
             $overdue_model->total_amount = $value['total_amount'];
             $overdue_model->save();
         }
+        // 保存最后更新时间
+        $model = Patent::findOne(['application_no' => $application_no]);
+        $model->payment_updated_at = time();
+        $model->save();
     }
 
     /**
@@ -378,11 +394,11 @@ class SpiderController extends Controller
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-            'proxy' => $this->getIP(),
+            // 'proxy' => $this->getIP(),
             'cookies' => true,
-            'timeout' => 60,
+            'timeout' => 10,
             'allow_redirects' => false,
-            'connect_timeout' => 60,
+            'connect_timeout' => 10,
         ]);
         $requests = function ($total) use ($base_uri, $application_no, $client) {
             foreach ($application_no as $patent) {
@@ -409,7 +425,7 @@ class SpiderController extends Controller
             'rejected' => function ($reason, $index) use ($patent_list) {
 
                 $this->stdout('Error occurred time:' . date('H:i:s',time()) . PHP_EOL);
-                $this->stdout('Error No:' . $patent_list[$index]['application_no'] . ' Reason:' . $reason . PHP_EOL);
+                $this->stdout('Error No:' . $patent_list[$index]['application_no'] . ' Reason:' . $reason->getMessage() . PHP_EOL);
                 // this is delivered each failed request
             },
         ]);
@@ -631,6 +647,7 @@ class SpiderController extends Controller
         $model->ip_agency = $data['ip_agency'];
         $model->first_named_attorney = $data['first_named_attorney'];
         $model->updated_at = time();
+        $model->basic_updated_at = time();
         $model->save();
 
         if ($data['change_of_bibliographic_data']) {
@@ -659,11 +676,11 @@ class SpiderController extends Controller
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-            'proxy' => $this->getIP(),
+            // 'proxy' => $this->getIP(),
             'cookies' => true,
-            'timeout' => 60,
+            'timeout' => 10,
             'allow_redirects' => false,
-            'connect_timeout' => 60,
+            'connect_timeout' => 10,
         ]);
         $requests = function ($total) use ($base_uri, $application_no, $client) {
             foreach ($application_no as $patent) {
@@ -690,7 +707,7 @@ class SpiderController extends Controller
             'rejected' => function ($reason, $index) use ($patent_list) {
 
                 $this->stdout('Error occurred time:' . date('H:i:s',time()) . PHP_EOL);
-                $this->stdout('Error No:' . $patent_list[$index]['application_no'] . ' Reason:' . $reason . PHP_EOL);
+                $this->stdout('Error No:' . $patent_list[$index]['application_no'] . ' Reason:' . $reason->getMessage() . PHP_EOL);
                 // this is delivered each failed request
             },
         ]);
@@ -818,6 +835,7 @@ class SpiderController extends Controller
         $model->issue_announcement = $data['issue_announcement'];
         $model->issue_no = $data['issue_no'];
         $model->updated_at = time();
+        $model->publication_updated_at = time();
         $model->save();
     }
 
@@ -975,11 +993,11 @@ class SpiderController extends Controller
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-            'proxy' => $this->getIP(),
+            // 'proxy' => $this->getIP(),
             'cookies' => true,
-            'timeout' => 60,
+            'timeout' => 10,
             'allow_redirects' => false,
-            'connect_timeout' => 60,
+            'connect_timeout' => 10,
         ]);
 
         $response = $client->request('GET', $base_uri[$info_type] . $application_no);
