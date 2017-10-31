@@ -29,6 +29,12 @@ $config = [
             'enableSession' => false,
             'loginUrl' => null
         ],
+        'redis' => [
+            'class' => 'yii\redis\Connection',
+            'hostname' => '127.0.0.1',
+            'port' => 6379,
+            'database' => 1,
+        ],
         'errorHandler' => [
             'errorAction' => 'default/error',
         ],
