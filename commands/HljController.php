@@ -7,17 +7,18 @@
 
 namespace app\commands;
 
-use yii\console\Controller;
 use GuzzleHttp\Client;
 use Symfony\Component\DomCrawler\Crawler;
 
-class HljController extends Controller
+class HljController extends BaseController
 {
     public function actionIndex()
     {
-        $total = 19439;
-        $pagerecord = 500; // 最多500
+        $total = 19500;
+        $pagerecord = 300; // 最多500
+        $successCount = 0;
 
+        echo 'Start time: ' . date('y/m/d H:i:s') . PHP_EOL;
         for ($i=1; $i <= ceil($total / $pagerecord); $i++) {
             $client = new Client();
             $options = [
@@ -28,22 +29,23 @@ class HljController extends Controller
                     'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                     'Accept-Language' => 'zh-CN,zh;q=0.8',
                     'Connection' => 'keep-alive',
-                    // 'Cookie' => 'tencentSig=4818557952; JSESSIONID='.$this->getJessionID().'; _qddac=4-3-1.1d0eof.1912wz.j9aobqjv; _qddaz=QD.xuzlxr.ai4dpc.j8fo6daj; _gscu_1547464065=043244422dtr4j90; IESESSION=alive; _qddamta_4001880860=4-0; _qdda=4-1.1d0eof; _qddab=4-1912wz.j9aobqjv', // _qddab 每天不一样
-                    'Cookie' => 'tencentSig=4818557952; JSESSIONID=2E090CAC50D86904B5E291CA23FADAD9; _qddaz=QD.xuzlxr.ai4dpc.j8fo6daj; _gscu_1547464065=043244422dtr4j90; IESESSION=alive; _qddamta_4001880860=4-0; _qdda=4-1.1d0eof; _qddab=4-1912wz.j9aobqjv',
+                    'Cookie' => 'JSESSIONID='.$this->getJsessionID().';',
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36'
                 ],
                 'form_params' => [
                     'area' => 'cn',
-                    'strWhere' => '申请（专利权）人=(哈尔滨工业大学)',
-                    'strSynonymous' => 'SYNONYM_UTF8',
-                    'strSortMethod' => 'RELEVANCE',
-                    'strDefautCols' => '主权项, 名称',
-                    'iHitPointType' => 115,
-                    'strChannels' => '14,15,16',
                     'searchKind' => 'tableSearch',
-                    'trsLastWhere' => null,
+//                    'strChannels' => 'fmzl_ft,syxx_ft,wgzl_ab,fmsq_ft',
+                    'strChannels' => '14,15,16,17',
+                    'strSynonymous' => 'SYNONYM_UTF8',
                     'ABSTBatchCount' => 0,
-                    'strSources' => 'fmzl_ft,syxx_ft,wgzl_ab',
+                    'strWhere' => '申请（专利权）人=(哈尔滨工业大学)',
+                    'strSources' => 'fmzl_ft,syxx_ft,wgzl_ab,fmsq_ft',
+                    'strSortMethod' => 'RELEVANCE',
+//                    'synonymous' => 'SYNONYM_UTF8',
+                    'strDefautCols' => '主权项, 名称, 摘要',
+                    'iHitPointType' => 115,
+                    'trsLastWhere' => null,
                     'iOption' => 2,
                     'pageIndex' => $i,
                     'pagerecord' => $pagerecord
@@ -63,18 +65,48 @@ class HljController extends Controller
                 });
             foreach ($span as $key => $value) {
                 // 专利号
-                echo (new Crawler($value))->filter('input')->attr('an');
+                $number = (new Crawler($value))->filter('input')->attr('an');
+                $number = str_replace('.', '', substr($number, 2));
                 // 有效 无效
                 $status = new Crawler();
                 $status->addHtmlContent($value);
-                echo $status->filter('.checkbox > span')->last()->html().PHP_EOL;
+                $status = $status->filter('.checkbox > span')->last()->html();
+                // 类型
+                $type = new Crawler();
+                $type->addHtmlContent($value);
+                $type = $type->filter('.checkbox > span')->eq(1)->html(); // eq 写-2 不会被识别只能写 2 了
+                // 标题
+                $title = new Crawler();
+                $title->addHtmlContent($value);
+                $title = $title->filter('input')->attr('title');
+
+                // input value的值，包括了公告号等信息
+                $info = new Crawler();
+                $info->addHtmlContent($value);
+                $info = $info->filter('input')->attr('value');
+                $info = substr_replace(str_replace(['\',',':\'','\'}'],['","','":"','"}'],$info), '"', 1,0); // 转化为php的可识别的json格式,这种替换方式可能出问题
+                $info = json_decode($info, true);
+                $publication_date = str_replace('.', '-', $info['pd']); // 公开日
+                $publication_no = $info['pnm']; // 公开号
+                $filing_date = str_replace('.', '-', $info['ad']); // 申请日
+
+//                $sql = "INSERT INTO patent(application_no,general_status,patent_type,title,publication_date,publication_no,filing_date) VALUE('$number','$status','$type','$title','$publication_date','$publication_no','$filing_date') ON DUPLICATE KEY UPDATE general_status='$status',patent_type='$type',title='$title',publication_date='$publication_date',publication_no='$publication_no',filing_date='$filing_date'";
+                $sql = "INSERT INTO patent(application_no,general_status,patent_type,title) VALUE('$number','$status','$type','$title') ON DUPLICATE KEY UPDATE general_status='$status',patent_type='$type',title='$title'";
+                $rows = \Yii::$app->db->createCommand($sql)->execute();
+                if ($rows) $successCount += 1;
             }
         }
+        echo 'End time: ' . date('y/m/d H:i:s') . PHP_EOL . 'Write successful: ' . $successCount;
     }
 
-    public function getJsessionID()
+    /**
+     * 获取登录之后的sessionid
+     *
+     * @return mixed
+     */
+    private function getJsessionID()
     {
-        $ch = curl_init('http://db.hlipo.gov.cn:8080/ipsss/showSearchForm.do?area=cn');
+        $ch = curl_init('http://db.hlipo.gov.cn:8080/ipsss/login.do?' . rawurlencode('timeStamp='.date('D M d Y H:i:s')) .'GMT+0800'. rawurlencode(' (中国标准时间)') . '&username=guest&password=123456&totalPages=0');
         curl_setopt($ch, CURLOPT_REFERER, "http://db.hlipo.gov.cn:8080/ipsss/");
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['host' => 'http://db.hlipo.gov.cn:8080']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
