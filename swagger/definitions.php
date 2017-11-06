@@ -71,6 +71,12 @@ namespace app\swagger;
  *          example="一通回案实审",
  *     ),
  *     @SWG\Property(
+ *          property="general_status",
+ *          type="string",
+ *          description="一般状态",
+ *          example="有效",
+ *     ),
+ *     @SWG\Property(
  *          property="publication_no",
  *          type="string",
  *          description="公开号",

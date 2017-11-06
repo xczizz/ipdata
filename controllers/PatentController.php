@@ -88,6 +88,7 @@ class PatentController extends BaseController
             'title',
             'filing_date',
             'case_status',
+            'general_status',
             'publication_no',
             'publication_date',
             'issue_announcement',
@@ -168,6 +169,41 @@ class PatentController extends BaseController
             ->where(['patent_id' => $this->_patent->id])
             ->orderBy('due_date ASC')
             ->all();
+    }
+
+    /**
+     * @SWG\Get(
+     *     path="/patents/{application_no}/latest-unpaid-fee",
+     *     tags={"Patent"},
+     *     summary="最近一条未缴费信息",
+     *     description="获取数据库里时间最靠前的一条信息",
+     *     @SWG\Parameter(
+     *          in = "path",
+     *          name = "application_no",
+     *          description = "申请号",
+     *          required = true,
+     *          type = "string"
+     *     ),
+     *     @SWG\Response(
+     *          response = 200,
+     *          description = "OK",
+     *          @SWG\Schema(ref="#/definitions/UnpaidFee")
+     *     ),
+     *     @SWG\Response(
+     *          response = 404,
+     *          description = "Not Found",
+     *          @SWG\Schema(ref="#/definitions/Error")
+     *     ),
+     * )
+     *
+     * @return array|null|\yii\db\ActiveRecord
+     */
+    public function actionLatestUnpaidFee()
+    {
+        return UnpaidFeeApi::find()
+            ->where(['patent_id' => $this->_patent->id])
+            ->orderBy('due_date ASC')
+            ->one();
     }
 
     /**
