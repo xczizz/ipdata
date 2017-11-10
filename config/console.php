@@ -15,7 +15,6 @@ $config = [
         ],
         'log' => [
             'flushInterval' => 1,
-            'traceLevel' => 0,
             'targets' => [
                 [
                     'class' => 'yii\log\FileTarget',
