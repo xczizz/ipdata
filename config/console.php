@@ -14,10 +14,20 @@ $config = [
             'class' => 'yii\caching\FileCache',
         ],
         'log' => [
+            'flushInterval' => 1,
+            'traceLevel' => 0,
             'targets' => [
                 [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning'],
+                ],
+                [
+                    'class' => 'yii\log\FileTarget',
+                    'exportInterval' => 1,
+                    'levels' => ['info'],
+                    'categories' => ['crawler'],
+                    'logFile' => '@app/runtime/logs/crawler.log',
+                    'logVars' => [],
                 ],
             ],
         ],
