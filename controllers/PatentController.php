@@ -53,7 +53,7 @@ class PatentController extends BaseController
         }
         return true;
     }
-    
+
     /**
      * @SWG\Get(
      *     path="/patents/view/{application_no}",
