@@ -61,7 +61,7 @@ class SyncAppNoController extends Controller
         echo 'Successfully written: '.$successCount . PHP_EOL;
         $end_time = microtime(true);
         echo '花费时间: '. round($end_time-$start_time, 2) . PHP_EOL;
-        echo 'End time: ' . date('y/m/d H:i:s');
+        echo 'End time: ' . date('y/m/d H:i:s') . PHP_EOL;
 
     }
 

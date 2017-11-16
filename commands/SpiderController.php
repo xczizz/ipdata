@@ -23,57 +23,69 @@ class SpiderController extends BaseController
 {
     public $queue = [];
 
-    public function actionIndex()
+    /**
+     * @param bool $b basic 基本信息
+     * @param bool $p publication 公告信息
+     * @param bool $f fee 费用信息
+     */
+    public function actionIndex($b = true, $p = true, $f = true)
     {
         // 今日时间戳
         $today_time = strtotime(date('Y-m-d'));
         $start = $_SERVER['REQUEST_TIME'];  // 开始时间
         $this->stdout('Start time:' . date('H:i:s',$start) . PHP_EOL);
-        $this->queue = Patent::find()->select(['application_no'])->where(['<', 'basic_updated_at', $today_time])->asArray()->all();
-        $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
 
-        while (!empty($this->queue)) {
-            $patents_list = [];
-            for ($i = 0; $i < 10 ; $i++) {
-                $patents_list[] = array_shift($this->queue);
+        if ($b) {
+            $this->queue = Patent::find()->select(['application_no'])->where(['<', 'basic_updated_at', $today_time])->asArray()->all();
+            $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
+
+            while (!empty($this->queue)) {
+                $patents_list = [];
+                for ($i = 0; $i < 10 ; $i++) {
+                    $patents_list[] = array_shift($this->queue);
+                }
+                $this->crawlBasicInfo(array_filter($patents_list));
+
+                $randomSeconds = mt_rand(1,3);
+                // sleep($randomSeconds);
+
             }
-            $this->crawlBasicInfo(array_filter($patents_list));
-
-            $randomSeconds = mt_rand(1,3);
-            // sleep($randomSeconds);
-
+            $this->stdout('crawlBasicInfo done' . PHP_EOL);
         }
-        $this->stdout('crawlBasicInfo done' . PHP_EOL);
 
-        $this->queue = Patent::find()->select(['application_no'])->where(['<', 'publication_updated_at', $today_time])->asArray()->all();
-        $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
-        while (!empty($this->queue)) {
-            $patents_list = [];
-            for ($i = 0; $i < 10 ; $i++) {
-                $patents_list[] = array_shift($this->queue);
+        if ($p) {
+            $this->queue = Patent::find()->select(['application_no'])->where(['<', 'publication_updated_at', $today_time])->asArray()->all();
+            $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
+            while (!empty($this->queue)) {
+                $patents_list = [];
+                for ($i = 0; $i < 10 ; $i++) {
+                    $patents_list[] = array_shift($this->queue);
+                }
+                $this->crawlPublicationInfo(array_filter($patents_list));
+
+                $randomSeconds = mt_rand(1,3);
+                // sleep($randomSeconds);
+
             }
-            $this->crawlPublicationInfo(array_filter($patents_list));
-
-            $randomSeconds = mt_rand(1,3);
-            // sleep($randomSeconds);
-
+            $this->stdout('crawlPublicationInfo done' . PHP_EOL);
         }
-        $this->stdout('crawlPublicationInfo done' . PHP_EOL);
 
-        $this->queue = Patent::find()->select(['application_no'])->where(['<', 'payment_updated_at', $today_time])->asArray()->all();
-        $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
-        while (!empty($this->queue)) {
-            $patents_list = [];
-            for ($i = 0; $i < 10 ; $i++) {
-                $patents_list[] = array_shift($this->queue);
+        if ($f) {
+            $this->queue = Patent::find()->select(['application_no'])->where(['<', 'payment_updated_at', $today_time])->asArray()->all();
+            $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
+            while (!empty($this->queue)) {
+                $patents_list = [];
+                for ($i = 0; $i < 10 ; $i++) {
+                    $patents_list[] = array_shift($this->queue);
+                }
+                $this->crawlPaymentInfo(array_filter($patents_list));
+
+                $randomSeconds = mt_rand(1,3);
+                // sleep($randomSeconds);
+
             }
-            $this->crawlPaymentInfo(array_filter($patents_list));
-
-            $randomSeconds = mt_rand(1,3);
-            // sleep($randomSeconds);
-
+            $this->stdout('crawlPaymentInfo done' . PHP_EOL);
         }
-        $this->stdout('crawlPaymentInfo done' . PHP_EOL);
 
         $this->stdout('Time Consuming:' . (time() - $start) . ' seconds' . PHP_EOL);
 
