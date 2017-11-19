@@ -41,7 +41,7 @@ class SpiderController extends BaseController
 
             while (!empty($this->queue)) {
                 $patents_list = [];
-                for ($i = 0; $i < 10 ; $i++) {
+                for ($i = 0; $i < 5 ; $i++) {
                     $patents_list[] = array_shift($this->queue);
                 }
                 $this->crawlBasicInfo(array_filter($patents_list));
@@ -58,7 +58,7 @@ class SpiderController extends BaseController
             $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
             while (!empty($this->queue)) {
                 $patents_list = [];
-                for ($i = 0; $i < 10 ; $i++) {
+                for ($i = 0; $i < 5 ; $i++) {
                     $patents_list[] = array_shift($this->queue);
                 }
                 $this->crawlPublicationInfo(array_filter($patents_list));
@@ -75,7 +75,7 @@ class SpiderController extends BaseController
             $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
             while (!empty($this->queue)) {
                 $patents_list = [];
-                for ($i = 0; $i < 10 ; $i++) {
+                for ($i = 0; $i < 5 ; $i++) {
                     $patents_list[] = array_shift($this->queue);
                 }
                 $this->crawlPaymentInfo(array_filter($patents_list));
@@ -104,7 +104,7 @@ class SpiderController extends BaseController
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-            // 'proxy' => $this->getIP(),
+             'proxy' => $this->getIP(),
             'cookies' => true,
             'timeout' => 10,
             'allow_redirects' => false,
@@ -405,7 +405,7 @@ class SpiderController extends BaseController
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-            // 'proxy' => $this->getIP(),
+             'proxy' => $this->getIP(),
             'cookies' => true,
             'timeout' => 10,
             'allow_redirects' => false,
@@ -687,7 +687,7 @@ class SpiderController extends BaseController
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-            // 'proxy' => $this->getIP(),
+             'proxy' => $this->getIP(),
             'cookies' => true,
             'timeout' => 10,
             'allow_redirects' => false,
