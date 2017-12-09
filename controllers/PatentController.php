@@ -211,7 +211,7 @@ class PatentController extends BaseController
      * @SWG\Get(
      *     path="/patents/{application_no}/latest-unpaid-fees",
      *     tags={"Patent"},
-     *     summary="最近一条未缴费信息",
+     *     summary="最近一个日期所有的未缴费信息",
      *     description="获取数据库里时间最靠前的那个时间点的所有待缴费信息，正常情况下返回一条，如果有滞纳金则返回两条",
      *     @SWG\Parameter(
      *          in = "path",
