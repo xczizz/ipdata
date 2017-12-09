@@ -65,6 +65,7 @@ $config = [
                 'GET patents/<application_no:\w+>/change-of-bibliographic-data' => 'patent/change-of-bibliographic-data',
                 'GET patents/<application_no:\w+>/unpaid-fees' => 'patent/unpaid-fees',
                 'GET patents/<application_no:\w+>/latest-unpaid-fee' => 'patent/latest-unpaid-fee',
+                'GET patents/<application_no:\w+>/latest-unpaid-fees' => 'patent/latest-unpaid-fees',
                 'GET patents/<application_no:\w+>/paid-fees' => 'patent/paid-fees',
                 'GET patents/<application_no:\w+>/overdue-fees' => 'patent/overdue-fees',
                 'POST patents' => 'patent/create'
