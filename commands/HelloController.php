@@ -135,10 +135,12 @@ class HelloController extends Controller
         }
 
         $overdue_list = UnpaidFee::find()->where(['like', 'type', '滞纳金'])->asArray()->all();
-        foreach ($overdue_list as $idx => $value) {
+        $idx = 2;
+        foreach ($overdue_list as $value) {
             $overdue_annual_fee = UnpaidFee::find()->where(['due_date' => $value['due_date'], 'patent_id' => $value['patent_id']])->andWhere(['<>', 'id', $value['id']])->asArray()->all();
             if (count($overdue_annual_fee) == 1) {
                 $basic_info = Patent::findOne($value['patent_id'])->toArray();
+                if (mb_strpos($basic_info['applicants'], '哈尔滨工业大学') === false) continue; // 如果不是工大就跳出
                 $application_no = $basic_info['application_no'];
                 $title = $basic_info['title'];
                 $filing_date = $basic_info['filing_date']; // 申请日
@@ -151,26 +153,27 @@ class HelloController extends Controller
                 $type = $overdue_annual_fee[0]['type']; // 年费名称(第几年)
 
                 $excel->setActiveSheetIndex()
-                    ->setCellValue('A' . (string)($idx + 2), $application_no)
-                    ->setCellValue('B'. (string)($idx + 2), $title)
-                    ->setCellValue('C'. (string)($idx + 2), $filing_date)
-                    ->setCellValue('D'. (string)($idx + 2), $issue_announcement)
-                    ->setCellValue('E'. (string)($idx + 2), $inventors)
-                    ->setCellValue('F'. (string)($idx + 2), $applicants)
-                    ->setCellValue('G'. (string)($idx + 2), $due_date)
-                    ->setCellValue('H'. (string)($idx + 2), $amount)
-                    ->setCellValue('I'. (string)($idx + 2), $overdue)
-                    ->setCellValue('J'. (string)($idx + 2), $type);
+                    ->setCellValue('A' . (string)($idx), $application_no)
+                    ->setCellValue('B'. (string)($idx), $title)
+                    ->setCellValue('C'. (string)($idx), $filing_date)
+                    ->setCellValue('D'. (string)($idx), $issue_announcement)
+                    ->setCellValue('E'. (string)($idx), $inventors)
+                    ->setCellValue('F'. (string)($idx), $applicants)
+                    ->setCellValue('G'. (string)($idx), $due_date)
+                    ->setCellValue('H'. (string)($idx), $amount)
+                    ->setCellValue('I'. (string)($idx), $overdue)
+                    ->setCellValue('J'. (string)($idx), $type);
 
                 for ($i = ord('A'); $i <= ord('J'); $i++) {
                     if ($i == ord('A')) {
-                        $excel->getActiveSheet()->getStyle((string)chr($i) . (string)($idx + 2))->getNumberFormat()->setFormatCode('000000000');
+                        $excel->getActiveSheet()->getStyle((string)chr($i) . (string)($idx))->getNumberFormat()->setFormatCode('000000000');
                     }
-                    $excel->getActiveSheet()->getStyle((string)chr($i) . (string)($idx + 2))->applyFromArray($contentStyleArray)->getFont()->applyFromArray($contentFont);
-                    $excel->getActiveSheet()->getStyle((string)chr($i) . (string)($idx + 2))->getAlignment()->setIndent(1);
+                    $excel->getActiveSheet()->getStyle((string)chr($i) . (string)($idx))->applyFromArray($contentStyleArray)->getFont()->applyFromArray($contentFont);
+                    $excel->getActiveSheet()->getStyle((string)chr($i) . (string)($idx))->getAlignment()->setIndent(1);
                 }
 
-                $excel->getActiveSheet()->getRowDimension($idx + 2)->setRowHeight(20);
+                $excel->getActiveSheet()->getRowDimension($idx)->setRowHeight(20);
+                ++ $idx;
             } else {
                 // 目前所有有滞纳金的日期当天都是对应滞纳金和年费，没有其他相关的费用
             }

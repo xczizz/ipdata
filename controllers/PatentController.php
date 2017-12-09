@@ -14,6 +14,7 @@ use app\models\UnpaidFeeApi;
 use Yii;
 use app\models\ChangeOfBibliographicDataApi;
 use app\models\Patent;
+use yii\db\Query;
 use yii\web\BadRequestHttpException;
 use yii\web\ConflictHttpException;
 use yii\web\NotFoundHttpException;
@@ -204,6 +205,41 @@ class PatentController extends BaseController
             ->where(['patent_id' => $this->_patent->id])
             ->orderBy('due_date ASC')
             ->one();
+    }
+
+    /**
+     * @SWG\Get(
+     *     path="/patents/{application_no}/latest-unpaid-fees",
+     *     tags={"Patent"},
+     *     summary="最近一条未缴费信息",
+     *     description="获取数据库里时间最靠前的那个时间点的所有待缴费信息，正常情况下返回一条，如果有滞纳金则返回两条",
+     *     @SWG\Parameter(
+     *          in = "path",
+     *          name = "application_no",
+     *          description = "申请号",
+     *          required = true,
+     *          type = "string"
+     *     ),
+     *     @SWG\Response(
+     *          response = 200,
+     *          description = "OK",
+     *          @SWG\Schema(ref="#/definitions/UnpaidFees")
+     *     ),
+     *     @SWG\Response(
+     *          response = 404,
+     *          description = "Not Found",
+     *          @SWG\Schema(ref="#/definitions/Error")
+     *     ),
+     * )
+     *
+     * @return array|null|\yii\db\ActiveRecord
+     */
+    public function actionLatestUnpaidFees()
+    {
+        return UnpaidFeeApi::find()
+            ->where(['patent_id' => $this->_patent->id])
+            ->andWhere(['in', 'due_date', \app\models\UnpaidFee::find()->where(['patent_id' => $this->_patent->id])->min('due_date')])
+            ->all();
     }
 
     /**

@@ -41,7 +41,7 @@ class SpiderController extends BaseController
 
             while (!empty($this->queue)) {
                 $patents_list = [];
-                for ($i = 0; $i < 5 ; $i++) {
+                for ($i = 0; $i < 4 ; $i++) {
                     $patents_list[] = array_shift($this->queue);
                 }
                 $this->crawlBasicInfo(array_filter($patents_list));
@@ -58,7 +58,7 @@ class SpiderController extends BaseController
             $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
             while (!empty($this->queue)) {
                 $patents_list = [];
-                for ($i = 0; $i < 5 ; $i++) {
+                for ($i = 0; $i < 4 ; $i++) {
                     $patents_list[] = array_shift($this->queue);
                 }
                 $this->crawlPublicationInfo(array_filter($patents_list));
@@ -75,7 +75,7 @@ class SpiderController extends BaseController
             $this->stdout('queue len:' . count($this->queue) . PHP_EOL);
             while (!empty($this->queue)) {
                 $patents_list = [];
-                for ($i = 0; $i < 5 ; $i++) {
+                for ($i = 0; $i < 4 ; $i++) {
                     $patents_list[] = array_shift($this->queue);
                 }
                 $this->crawlPaymentInfo(array_filter($patents_list));
@@ -156,12 +156,17 @@ class SpiderController extends BaseController
         $crawler->addHtmlContent($html);
         $last_span = $crawler->filter('body > span')->last();
         if (!$last_span->count()) {
-            $this->stdout('Error: empty node'.$application_no.PHP_EOL.'Source code: '.$html);
-            return [
-                'unpaid_fee' => [],
-                'paid_fee' => [],
-                'overdue_fine' => []
-            ];
+            $rs = preg_match('/<span style="display: none" id="\w+">版权信息：国家知识产权局所有<\/span>/', $html, $_last_span);
+            if ($rs) {
+                $key = (new Crawler($_last_span))->filter('span')->last()->attr('id');
+            } else {
+                $this->stdout('Error: empty node '. $application_no .PHP_EOL.'Source code: '.$html);
+                return [
+                    'unpaid_fee' => [],
+                    'paid_fee' => [],
+                    'overdue_fine' => []
+                ];
+            }
         } else {
             $key = $last_span->attr('id');
         }
@@ -467,10 +472,14 @@ class SpiderController extends BaseController
             'change_of_bibliographic_data' => null
         ];
         if (!$last_span->count()) {
-
-            $this->stdout('Error: empty node '. $application_no .PHP_EOL.'Source code: '.$html);
-            return $result;
-
+            // 正则是能用，但问题是可能这个专利号本身就没有basic信息，只有费用信息
+            $rs = preg_match('/<span style="display: none" id="\w+">版权信息：国家知识产权局所有<\/span>/', $html, $_last_span);
+            if ($rs) {
+                $key = (new Crawler($_last_span))->filter('span')->last()->attr('id');
+            } else {
+                $this->stdout('Error: empty node '. $application_no .PHP_EOL.'Source code: '.$html);
+                return $result;
+            }
         } else {
             $key = $last_span->attr('id');
         }
@@ -746,10 +755,13 @@ class SpiderController extends BaseController
             'issue_no' => null
         ];
         if (!$last_span->count()) {
-
-            $this->stdout('Error: empty node'. $application_no . PHP_EOL.'Source code: '.$html);
-            return $publication;
-
+            $rs = preg_match('/<span style="display: none" id="\w+">版权信息：国家知识产权局所有<\/span>/', $html, $_last_span);
+            if ($rs) {
+                $key = (new Crawler($_last_span))->filter('span')->last()->attr('id');
+            } else {
+                $this->stdout('Error: empty node '. $application_no .PHP_EOL.'Source code: '.$html);
+                return $publication;
+            }
         } else {
             $key = $last_span->attr('id');
         }
@@ -893,24 +905,31 @@ class SpiderController extends BaseController
             'headers' => [
                 'User-Agent' => $this->getUA(),
             ],
-            // 'proxy' => $this->getIP(),
+            'proxy' => $this->getIP(),
             'cookies' => true,
             'timeout' => 10,
             'allow_redirects' => false,
             'connect_timeout' => 10,
         ]);
 
-        $response = $client->request('GET', $base_uri[$info_type] . $application_no);
+        @$response = $client->request('GET', $base_uri[$info_type] . $application_no);
 
-        $html = $response->getBody();
+        if ($response->getStatusCode() == 200) {
+            $html = $response->getBody();
+        } else {
+            $html = '';
+        }
 
         return $html;
     }
 
     /**
      * 单个爬取第一遍不能爬到的申请号
+     * @param bool $b
+     * @param bool $p
+     * @param bool $f
      */
-    public function actionSingle()
+    public function actionSingle($b = true, $p = true, $f = true)
     {
         $start = $_SERVER['REQUEST_TIME'];  // 开始时间
         $this->stdout('Start time:' . date('H:i:s',$start) . PHP_EOL);
@@ -922,18 +941,23 @@ class SpiderController extends BaseController
 
         foreach ($application_no_s as $application_no)
         {
-            $basic_html = $this->single($application_no, 'basic');
-            $result = $this->parseBasicInfo($basic_html, $application_no);
-            $this->saveBasicInfo($result, $application_no);
+            if ($b) {
+                $basic_html = $this->single($application_no, 'basic');
+                $result = $this->parseBasicInfo($basic_html, $application_no);
+                $this->saveBasicInfo($result, $application_no);
+            }
 
+            if ($f) {
+                $fee_html = $this->single($application_no, 'fee');
+                $result = $this->parsePaymentInfo($fee_html, $application_no);
+                $this->savePaymentInfo($result, $application_no);
+            }
 
-            $fee_html = $this->single($application_no, 'fee');
-            $result = $this->parsePaymentInfo($fee_html, $application_no);
-            $this->savePaymentInfo($result, $application_no);
-
-            $publication_html = $this->single($application_no, 'publication');
-            $result = $this->parsePublicationInfo($publication_html, $application_no);
-            $this->savePublicationInfo($result, $application_no);
+            if ($p) {
+                $publication_html = $this->single($application_no, 'publication');
+                $result = $this->parsePublicationInfo($publication_html, $application_no);
+                $this->savePublicationInfo($result, $application_no);
+            }
 
             $randomSeconds = mt_rand(1,3);
             sleep($randomSeconds);
@@ -949,7 +973,7 @@ class SpiderController extends BaseController
     public function actionTest()
     {
         // 基本信息测试
-//        $result = $this->parseBasicInfo($this->basic_info_html);
+//        $result = $this->parseBasicInfo(file_get_contents('tmp.txt'),'2005100096147');
 //        print_r($result);
 
         // 公开号测试 publication_info_html为发明专利,publication_info_html_b为实用新型
