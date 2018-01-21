@@ -174,6 +174,36 @@ class PatentController extends BaseController
 
     /**
      * @SWG\Get(
+     *     path="/patents/due/{days}",
+     *     tags={"Patent"},
+     *     summary="获取即将到期的专利号",
+     *     description="根据传递进来的天数获取即将到期的专利号",
+     *     @SWG\Parameter(
+     *          in = "path",
+     *          name = "days",
+     *          description = "天数,可用-1,20等表示(正数不要写+号)",
+     *          required = true,
+     *          type = "integer"
+     *     ),
+     *     @SWG\Response(
+     *          response = 200,
+     *          description = "OK",
+     *     ),
+     * )
+     */
+    public function actionDue()
+    {
+        $days = (int)Yii::$app->request->getQueryParam('days');
+        // 本地测试的子查询比left join快一些
+        // SELECT DISTINCT application_no,unpaid_fee.patent_id FROM `unpaid_fee` LEFT JOIN patent ON unpaid_fee.patent_id = patent.id WHERE TO_DAYS(due_date)-TO_DAYS(NOW()) = 1; # 0.2999s
+        // SELECT application_no FROM patent WHERE id in (SELECT DISTINCT patent_id FROM unpaid_fee WHERE TO_DAYS(due_date)-TO_DAYS(NOW()) = 1); # 0.1720s
+        $sql = "SELECT application_no FROM patent WHERE id in (SELECT DISTINCT patent_id FROM unpaid_fee WHERE TO_DAYS(due_date)-TO_DAYS(NOW()) = $days)";
+        $result = Yii::$app->db->createCommand($sql)->queryAll();
+        return array_column($result, 'application_no');
+    }
+
+    /**
+     * @SWG\Get(
      *     path="/patents/{application_no}/latest-unpaid-fee",
      *     tags={"Patent"},
      *     summary="最近一条未缴费信息",
