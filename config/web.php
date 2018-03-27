@@ -69,7 +69,9 @@ $config = [
                 'GET patents/<application_no:\w+>/latest-unpaid-fees' => 'patent/latest-unpaid-fees',
                 'GET patents/<application_no:\w+>/paid-fees' => 'patent/paid-fees',
                 'GET patents/<application_no:\w+>/overdue-fees' => 'patent/overdue-fees',
-                'POST patents' => 'patent/create'
+                'POST patents' => 'patent/create',
+                'PUT patents' => 'patent/update',
+                'GET patents/list' => 'patent/list'
             ],
         ],
     ],

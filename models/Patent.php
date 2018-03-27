@@ -46,7 +46,7 @@ class Patent extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['publication_date', 'issue_announcement'], 'safe'],
+            [['publication_date', 'issue_announcement'], 'date', 'format' => 'Y-m-d'],
             [['updated_at', 'basic_updated_at', 'publication_updated_at', 'payment_updated_at'], 'integer'],
             [['application_no', 'general_status'], 'string', 'max' => 20],
             [['patent_type'], 'string', 'max' => 10],

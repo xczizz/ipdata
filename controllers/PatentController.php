@@ -9,12 +9,15 @@
 namespace app\controllers;
 
 use app\models\OverdueFineApi;
+use app\models\PaidFee;
+use app\models\UnpaidFee;
+use app\models\OverdueFine;
+use app\models\ChangeOfBibliographicData;
 use app\models\PaidFeeApi;
 use app\models\UnpaidFeeApi;
 use Yii;
 use app\models\ChangeOfBibliographicDataApi;
 use app\models\Patent;
-use yii\db\Query;
 use yii\web\BadRequestHttpException;
 use yii\web\ConflictHttpException;
 use yii\web\NotFoundHttpException;
@@ -386,6 +389,103 @@ class PatentController extends BaseController
         $patent->save();
         Yii::$app->getResponse()->setStatusCode(201);
         return $patent->toArray(['application_no']);
+    }
+
+    /**
+     * 返回所有的申请号
+     *
+     * @return array
+     */
+    public function actionList()
+    {
+        return Patent::find()->select(['application_no'])->column();
+    }
+    
+    /**
+     * put 方式更新数据所有
+     *
+     * @throws BadRequestHttpException
+     */
+    public function actionUpdate()
+    {
+        $result = Yii::$app->request->bodyParams;
+        if (!isset($result['application_no'])) {
+            throw new BadRequestHttpException('application_no is required');
+        }
+        $patent = Patent::findOne(['application_no' => $result['application_no']]);
+        $patent->patent_type = $result['patent_type'] ?? '';
+        $patent->title = $result['title'] ?? '';
+        $patent->filing_date = $result['filing_date'] ?? '';
+        $patent->case_status = $result['case_status'] ?? '';
+        $patent->general_status = $result['general_status'] ?? null;
+        $patent->publication_date = $result['publication_date'] ?? '';
+        $patent->publication_no = $result['publication_no'] ? str_replace(' ','',$result['publication_no']) : '';
+        $patent->issue_announcement = $result['issue_announcement'] ?? '';
+        $patent->issue_no = $result['issue_no'] ? str_replace(' ','',$result['issue_no']) : '';
+        $patent->applicants = $result['applicants'] ?? '';
+        $patent->inventors = $result['inventors'] ?? '';
+        $patent->ip_agency = $result['ip_agency'] ?? '';
+        $patent->first_named_attorney = $result['first_named_attorney'] ?? '';
+        $patent->updated_at = time();
+        $patent->basic_updated_at = time();
+
+        if (!$patent->save()) {
+            throw new BadRequestHttpException(implode(' ', array_column($patent->errors, 0)));
+        }
+
+        if (isset($result['paid_fee']) && !empty($result['paid_fee'])) {
+            PaidFee::deleteAll(['patent_id' => $patent->id]);
+            $paid_fee_model = new PaidFee();
+            foreach ($result['paid_fee'] as $paid_fee) {
+                $_model = clone $paid_fee_model;
+                $paid_fee['patent_id'] = $patent->id;
+                $_model->setAttributes($paid_fee);
+                if (!$_model->save()) {
+                    throw new BadRequestHttpException(implode(' ', array_column($_model->errors, 0)));
+                }
+            }
+        }
+
+        if (isset($result['unpaid_fee']) && !empty($result['unpaid_fee'])) {
+            UnpaidFee::deleteAll(['patent_id' => $patent->id]);
+            $unpaid_fee_model = new UnpaidFee();
+            foreach ($result['unpaid_fee'] as $unpaid_fee) {
+                $_model = clone $unpaid_fee_model;
+                $unpaid_fee['patent_id'] = $patent->id;
+                $_model->setAttributes($unpaid_fee);
+                if (!$_model->save()) {
+                    throw new BadRequestHttpException(implode(' ', array_column($_model->errors, 0)));
+                }
+            }
+        }
+
+        if (isset($result['over_due_fee']) && !empty($result['over_due_fee'])) {
+            OverdueFine::deleteAll(['patent_id' => $patent->id]);
+            $over_due_model = new OverdueFine();
+            foreach ($result['over_due_fee'] as $over_due) {
+                $_model = clone $over_due_model;
+                $over_due['patent_id'] = $patent->id;
+                $_model->setAttributes($over_due);
+                if (!$_model->save()) {
+                    throw new BadRequestHttpException(implode(' ', array_column($_model->errors, 0)));
+                }
+            }
+        }
+
+        if (isset($result['change_of_bibliographic']) && !empty($result['change_of_bibliographic'])) {
+            ChangeOfBibliographicData::deleteAll(['patent_id' => $patent->id]);
+            $change = new ChangeOfBibliographicData();
+            foreach ($result['change_of_bibliographic'] as $item) {
+                $_model = clone $change;
+                $item['patent_id'] = $patent->id;
+                $_model->setAttributes($item);
+                if (!$_model->save()) {
+                    throw new BadRequestHttpException(implode(' ', array_column($_model->errors, 0)));
+                }
+            }
+        }
+
+        Yii::$app->response->statusCode = 204;
     }
 
     /**
