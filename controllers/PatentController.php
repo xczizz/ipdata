@@ -436,6 +436,9 @@ class PatentController extends BaseController
         $patent->first_named_attorney = $result['first_named_attorney'] ?? '';
         $patent->updated_at = time();
         $patent->basic_updated_at = time();
+        if (isset($result['paid_fee'])) {
+            $patent->payment_updated_at = time();
+        }
 
         if (!$patent->save()) {
             throw new BadRequestHttpException(implode(' ', array_column($patent->errors, 0)));
@@ -517,6 +520,10 @@ class PatentController extends BaseController
         }
 
         if (isset($result['unpaid_fee'])) {
+            $patent = Patent::findOne(['application_no' => $patent_id]);
+            $patent->payment_updated_at = time();
+            $patent->save();
+
             UnpaidFee::deleteAll(['patent_id' => $patent_id]);
             $unpaid_fee_model = new UnpaidFee();
             foreach ($result['unpaid_fee'] as $unpaid_fee) {
