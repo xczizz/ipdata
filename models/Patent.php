@@ -54,6 +54,7 @@ class Patent extends \yii\db\ActiveRecord
             [['filing_date', 'case_status', 'publication_no', 'issue_no'], 'string', 'max' => 50],
             [['ip_agency', 'first_named_attorney'], 'string', 'max' => 255],
             [['application_no'], 'unique'],
+            ['application_no', 'required']
         ];
     }
 
@@ -96,6 +97,9 @@ class Patent extends \yii\db\ActiveRecord
         if ($insert) {
             // 同步申请号到redis中
             Yii::$app->redis->sadd(Patent::APP_NOS_REDIS_KEY, $this->application_no);
+            Yii::$app->response->statusCode = 201;
+        } else {
+            Yii::$app->response->statusCode = 204;
         }
         return parent::afterSave($insert, $changedAttributes);
     }

@@ -52,7 +52,7 @@ class PatentController extends BaseController
         if ($application_no = Yii::$app->request->getQueryParam('application_no')) {
             $this->_patent = Patent::findOne(['application_no' => $application_no]);
             if ($this->_patent === null) {
-                throw new NotFoundHttpException();
+                throw new NotFoundHttpException('专利号不存在');
             }
         }
         return true;
@@ -402,7 +402,7 @@ class PatentController extends BaseController
     }
     
     /**
-     * put 方式更新数据所有
+     * put 方式更新数据，不存在就添加
      *
      * @throws BadRequestHttpException
      */
@@ -413,6 +413,14 @@ class PatentController extends BaseController
             throw new BadRequestHttpException('application_no is required');
         }
         $patent = Patent::findOne(['application_no' => $result['application_no']]);
+        if (!$patent) {
+            if (!$this->checkApplicationNo($result['application_no'])) {
+                throw new BadRequestHttpException('申请号校验失败');
+            }
+            $patent = new Patent();
+            $patent->application_no = $result['application_no'];
+        }
+
         $patent->patent_type = $result['patent_type'] ?? '';
         $patent->title = $result['title'] ?? '';
         $patent->filing_date = $result['filing_date'] ?? '';
@@ -433,7 +441,7 @@ class PatentController extends BaseController
             throw new BadRequestHttpException(implode(' ', array_column($patent->errors, 0)));
         }
 
-        if (isset($result['paid_fee']) && !empty($result['paid_fee'])) {
+        if (isset($result['paid_fee'])) {
             PaidFee::deleteAll(['patent_id' => $patent->id]);
             $paid_fee_model = new PaidFee();
             foreach ($result['paid_fee'] as $paid_fee) {
@@ -446,7 +454,7 @@ class PatentController extends BaseController
             }
         }
 
-        if (isset($result['unpaid_fee']) && !empty($result['unpaid_fee'])) {
+        if (isset($result['unpaid_fee'])) {
             UnpaidFee::deleteAll(['patent_id' => $patent->id]);
             $unpaid_fee_model = new UnpaidFee();
             foreach ($result['unpaid_fee'] as $unpaid_fee) {
@@ -459,7 +467,7 @@ class PatentController extends BaseController
             }
         }
 
-        if (isset($result['over_due_fee']) && !empty($result['over_due_fee'])) {
+        if (isset($result['over_due_fee'])) {
             OverdueFine::deleteAll(['patent_id' => $patent->id]);
             $over_due_model = new OverdueFine();
             foreach ($result['over_due_fee'] as $over_due) {
@@ -484,8 +492,56 @@ class PatentController extends BaseController
                 }
             }
         }
+    }
 
-        Yii::$app->response->statusCode = 204;
+    /**
+     * 只更新费用信息 post
+     *
+     * @throws BadRequestHttpException
+     */
+    public function actionUpdateFees()
+    {
+        $patent_id = $this->_patent->id;
+        $result = Yii::$app->request->bodyParams;
+        if (isset($result['paid_fee'])) {
+            PaidFee::deleteAll(['patent_id' => $patent_id]);
+            $paid_fee_model = new PaidFee();
+            foreach ($result['paid_fee'] as $paid_fee) {
+                $_model = clone $paid_fee_model;
+                $paid_fee['patent_id'] = $patent_id;
+                $_model->setAttributes($paid_fee);
+                if (!$_model->save()) {
+                    throw new BadRequestHttpException(implode(' ', array_column($_model->errors, 0)));
+                }
+            }
+        }
+
+        if (isset($result['unpaid_fee'])) {
+            UnpaidFee::deleteAll(['patent_id' => $patent_id]);
+            $unpaid_fee_model = new UnpaidFee();
+            foreach ($result['unpaid_fee'] as $unpaid_fee) {
+                $_model = clone $unpaid_fee_model;
+                $unpaid_fee['patent_id'] = $patent_id;
+                $_model->setAttributes($unpaid_fee);
+                if (!$_model->save()) {
+                    throw new BadRequestHttpException(implode(' ', array_column($_model->errors, 0)));
+                }
+            }
+        }
+
+        if (isset($result['over_due_fee'])) {
+            OverdueFine::deleteAll(['patent_id' => $patent_id]);
+            $over_due_model = new OverdueFine();
+            foreach ($result['over_due_fee'] as $over_due) {
+                $_model = clone $over_due_model;
+                $over_due['patent_id'] = $patent_id;
+                $_model->setAttributes($over_due);
+                if (!$_model->save()) {
+                    throw new BadRequestHttpException(implode(' ', array_column($_model->errors, 0)));
+                }
+            }
+        }
+        Yii::$app->response->statusCode = 201;
     }
 
     /**
