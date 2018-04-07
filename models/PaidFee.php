@@ -34,8 +34,7 @@ class PaidFee extends \yii\db\ActiveRecord
             [['patent_id'], 'required'],
             [['patent_id', 'amount'], 'integer'],
             [['paid_date'], 'safe'],
-            [['type', 'receipt_no'], 'string', 'max' => 255],
-            [['paid_by'], 'string', 'max' => 20],
+            [['type', 'receipt_no', 'paid_by'], 'string', 'max' => 255],
         ];
     }
 
