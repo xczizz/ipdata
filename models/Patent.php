@@ -97,9 +97,13 @@ class Patent extends \yii\db\ActiveRecord
         if ($insert) {
             // 同步申请号到redis中
             Yii::$app->redis->sadd(Patent::APP_NOS_REDIS_KEY, $this->application_no);
-            Yii::$app->response->statusCode = 201;
+            if (Yii::$app->id !== 'basic-console') {
+                Yii::$app->response->statusCode = 201;
+            }
         } else {
-            Yii::$app->response->statusCode = 204;
+            if (Yii::$app->id !== 'basic-console') {
+                Yii::$app->response->statusCode = 204;
+            }
         }
         return parent::afterSave($insert, $changedAttributes);
     }

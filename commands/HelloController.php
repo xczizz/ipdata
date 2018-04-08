@@ -194,4 +194,34 @@ class HelloController extends Controller
         echo date('H:i:s') , ' Current memory usage: ' , (memory_get_usage(true) / 1024 / 1024) , " MB" , PHP_EOL;
         echo date('H:i:s') , " Peak memory usage: " , (memory_get_peak_usage(true) / 1024 / 1024) , " MB" , PHP_EOL;
     }
+
+    public function actionGeneralImport($name)
+    {
+        $successCount = 0;
+        echo '开始时间: ' . date('y/m/d H:i:s') . PHP_EOL;
+        $path = './runtime/' . $name;
+        $objReader = \PHPExcel_IOFactory::load($path);
+        $sheetData = $objReader->getActiveSheet()->toArray(null,true,true,true);
+        $existCount = 0;
+        foreach ($sheetData as $key => $value) {
+            if ($key >= 2) {
+                $application_no = str_replace('.', '', substr($value['B'], 2));
+                if (!Patent::findOne(['application_no' => $application_no])) {
+                    $model = new Patent;
+                    $model->application_no = $application_no;
+                    if (!$model->save()) {
+                        echo '导入错误: ' . $application_no . PHP_EOL;
+                        print_r($model->errors);
+                        echo PHP_EOL;
+                    } else {
+                        $successCount ++;
+                    }
+                } else {
+                    $existCount ++;
+                }
+            }
+        }
+        echo '导入成功：'.$successCount.'条'.PHP_EOL.'已存在：'.$existCount.'条'.PHP_EOL;
+        echo '完成时间: ' . date('y/m/d H:i:s');
+    }
 }
