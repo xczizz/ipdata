@@ -195,7 +195,7 @@ class HelloController extends Controller
         echo date('H:i:s') , " Peak memory usage: " , (memory_get_peak_usage(true) / 1024 / 1024) , " MB" , PHP_EOL;
     }
 
-    public function actionGeneralImport($name)
+    public function actionGeneralImport($name, $column = 'B', $row = 2)
     {
         $successCount = 0;
         echo '开始时间: ' . date('y/m/d H:i:s') . PHP_EOL;
@@ -204,24 +204,127 @@ class HelloController extends Controller
         $sheetData = $objReader->getActiveSheet()->toArray(null,true,true,true);
         $existCount = 0;
         foreach ($sheetData as $key => $value) {
-            if ($key >= 2) {
-                $application_no = str_replace('.', '', substr($value['B'], 2));
-                if (!Patent::findOne(['application_no' => $application_no])) {
-                    $model = new Patent;
-                    $model->application_no = $application_no;
-                    if (!$model->save()) {
-                        echo '导入错误: ' . $application_no . PHP_EOL;
-                        print_r($model->errors);
-                        echo PHP_EOL;
+            if ($key >= $row) {
+                if (strtoupper(substr($value[$column],0,2)) === 'CN') {
+                    $application_no = str_replace('.', '', substr($value[$column], 2));
+                    if (!Patent::findOne(['application_no' => $application_no])) {
+                        $model = new Patent;
+                        $model->application_no = $application_no;
+                        if (!$model->save()) {
+                            echo '导入错误: ' . $application_no . PHP_EOL;
+                            print_r($model->errors);
+                            echo PHP_EOL;
+                        } else {
+                            $successCount ++;
+                        }
                     } else {
-                        $successCount ++;
+                        $existCount ++;
                     }
                 } else {
-                    $existCount ++;
+                    echo '非国内专利：' . $value[$column] . PHP_EOL;
                 }
+
             }
         }
         echo '导入成功：'.$successCount.'条'.PHP_EOL.'已存在：'.$existCount.'条'.PHP_EOL;
         echo '完成时间: ' . date('y/m/d H:i:s');
+    }
+
+    public function actionStatus()
+    {
+        $path = './runtime/status.xlsx';
+        $objReader = \PHPExcel_IOFactory::load($path);
+        $sheetData = $objReader->getActiveSheet()->toArray(null,true,true,true);
+        $array = [];
+        foreach ($sheetData as $key => $value) {
+            if ($key >= 2) {
+                $array[$value['A']] = $value['B'];
+            }
+        }
+//        print_r($array);
+        $_status = [
+            '一通出案待答复' => '审中',
+            '一通回案实审' => '审中',
+            '中通出案待答复' => '审中',
+            '中通回案实审' => '审中',
+            '合议组审查' => '审中',
+            '实审检查' => '审中',
+            '实审请求视撤，等恢复' => '审中',
+            '形式审查' => '审中',
+            '待质检抽案' => '审中',
+            '撤回专利申请' => '审中',
+            '等待合议组成立' => '审中',
+            '等待实审提案' => '审中',
+            '等待实审请求' => '审中',
+            '等待诉讼' => '审中',
+            '视为放弃失效' => '审中',
+            '进入实审' => '审中',
+            '逾期视撤，等恢复' => '审中',
+            '驳回等复审请求' => '审中',
+            '国优视撤' => '失效',
+            '其他失效' => '失效',
+            '实审请求视撤失效' => '失效',
+            '届满终止失效' => '失效',
+            '届满终止，待失效' => '失效',
+            '放弃专利权（重复授权）' => '失效',
+            '未缴年费终止失效' => '失效',
+            '逾期视撤失效' => '失效',
+            '驳回失效' => '失效',
+            '专利权维持' => '有效',
+            '待公告' => '有效',
+            '无效宣告失效' => '有效',
+            '未缴年费专利权终止，等恢复' => '有效',
+            '等年登印费' => '有效',
+            '等年费滞纳金' => '有效',
+            '等待颁证公告' => '有效'
+        ];
+    }
+
+    /**
+     * 根据case_status 更改相对应的 general_status
+     */
+    public function actionUpdateGeneralStatus()
+    {
+        $_status = [
+            '一通出案待答复' => '审中',
+            '一通回案实审' => '审中',
+            '中通出案待答复' => '审中',
+            '中通回案实审' => '审中',
+            '合议组审查' => '审中',
+            '实审检查' => '审中',
+            '实审请求视撤，等恢复' => '审中',
+            '形式审查' => '审中',
+            '待质检抽案' => '审中',
+            '撤回专利申请' => '审中',
+            '等待合议组成立' => '审中',
+            '等待实审提案' => '审中',
+            '等待实审请求' => '审中',
+            '等待诉讼' => '审中',
+            '视为放弃失效' => '审中',
+            '进入实审' => '审中',
+            '逾期视撤，等恢复' => '审中',
+            '驳回等复审请求' => '审中',
+            '国优视撤' => '失效',
+            '其他失效' => '失效',
+            '实审请求视撤失效' => '失效',
+            '届满终止失效' => '失效',
+            '届满终止，待失效' => '失效',
+            '放弃专利权（重复授权）' => '失效',
+            '未缴年费终止失效' => '失效',
+            '逾期视撤失效' => '失效',
+            '驳回失效' => '失效',
+            '专利权维持' => '有效',
+            '待公告' => '有效',
+            '无效宣告失效' => '有效',
+            '未缴年费专利权终止，等恢复' => '有效',
+            '等年登印费' => '有效',
+            '等年费滞纳金' => '有效',
+            '等待颁证公告' => '有效'
+        ];
+        $rows = 0;
+        foreach ($_status as $key => $value) {
+            $rows += Patent::updateAll(['general_status' => $value], ['case_status' => $key]);
+        }
+        echo '更改成功：' . $rows . '行'.PHP_EOL;
     }
 }

@@ -31,6 +31,46 @@ class PatentController extends BaseController
      */
     private $_patent;
 
+    /**
+     * @var array 状态对应关系
+     */
+    private  $_status = [
+        '一通出案待答复' => '审中',
+        '一通回案实审' => '审中',
+        '中通出案待答复' => '审中',
+        '中通回案实审' => '审中',
+        '合议组审查' => '审中',
+        '实审检查' => '审中',
+        '实审请求视撤，等恢复' => '审中',
+        '形式审查' => '审中',
+        '待质检抽案' => '审中',
+        '撤回专利申请' => '审中',
+        '等待合议组成立' => '审中',
+        '等待实审提案' => '审中',
+        '等待实审请求' => '审中',
+        '等待诉讼' => '审中',
+        '视为放弃失效' => '审中',
+        '进入实审' => '审中',
+        '逾期视撤，等恢复' => '审中',
+        '驳回等复审请求' => '审中',
+        '国优视撤' => '失效',
+        '其他失效' => '失效',
+        '实审请求视撤失效' => '失效',
+        '届满终止失效' => '失效',
+        '届满终止，待失效' => '失效',
+        '放弃专利权（重复授权）' => '失效',
+        '未缴年费终止失效' => '失效',
+        '逾期视撤失效' => '失效',
+        '驳回失效' => '失效',
+        '专利权维持' => '有效',
+        '待公告' => '有效',
+        '无效宣告失效' => '有效',
+        '未缴年费专利权终止，等恢复' => '有效',
+        '等年登印费' => '有效',
+        '等年费滞纳金' => '有效',
+        '等待颁证公告' => '有效'
+    ];
+
     public function behaviors()
     {
         $behaviors =  parent::behaviors();
@@ -425,7 +465,7 @@ class PatentController extends BaseController
         $patent->title = $result['title'] ?? '';
         $patent->filing_date = $result['filing_date'] ?? '';
         $patent->case_status = $result['case_status'] ?? '';
-        $patent->general_status = $result['general_status'] ?? null;
+        $patent->general_status = array_key_exists($result['case_status'], $this->_status) ? $this->_status[$result['case_status']] : null;
         $patent->publication_date = $result['publication_date'] ?? '';
         $patent->publication_no = $result['publication_no'] ? str_replace(' ','',$result['publication_no']) : '';
         $patent->issue_announcement = $result['issue_announcement'] ?? '';
