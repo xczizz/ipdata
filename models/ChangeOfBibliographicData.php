@@ -33,7 +33,7 @@ class ChangeOfBibliographicData extends \yii\db\ActiveRecord
             [['patent_id'], 'required'],
             [['patent_id'], 'integer'],
             [['date'], 'safe'],
-            [['changed_item', 'before_change', 'after_change'], 'string', 'max' => 255],
+            [['changed_item', 'before_change', 'after_change'], 'string', 'max' => 1000],
         ];
     }
 
