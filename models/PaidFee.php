@@ -10,7 +10,7 @@ use Yii;
  * @property integer $id
  * @property integer $patent_id
  * @property string $type
- * @property integer $amount
+ * @property float $amount
  * @property string $paid_date
  * @property string $paid_by
  * @property string $receipt_no
@@ -32,7 +32,8 @@ class PaidFee extends \yii\db\ActiveRecord
     {
         return [
             [['patent_id'], 'required'],
-            [['patent_id', 'amount'], 'integer'],
+            [['patent_id'], 'integer'],
+            [['amount'], 'number'],
             [['paid_date'], 'safe'],
             [['type', 'receipt_no', 'paid_by'], 'string', 'max' => 255],
         ];

@@ -10,7 +10,7 @@ use Yii;
  * @property integer $id
  * @property integer $patent_id
  * @property string $type
- * @property integer $amount
+ * @property float $amount
  * @property string $due_date
  */
 class UnpaidFee extends \yii\db\ActiveRecord
@@ -29,7 +29,8 @@ class UnpaidFee extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['patent_id', 'amount'], 'integer'],
+            [['patent_id'], 'integer'],
+            [['amount'], 'number'],
             [['due_date'], 'safe'],
             [['type'], 'string', 'max' => 50],
         ];

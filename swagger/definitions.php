@@ -178,7 +178,7 @@ namespace app\swagger;
  *     ),
  *     @SWG\Property(
  *          property="amount",
- *          type="integer",
+ *          type="number",
  *          description="应缴金额",
  *          example=6000,
  *     ),
@@ -211,7 +211,7 @@ namespace app\swagger;
  *     ),
  *     @SWG\Property(
  *          property="amount",
- *          type="integer",
+ *          type="number",
  *          description="缴费金额",
  *          example=2000,
  *     ),
